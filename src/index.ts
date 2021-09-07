@@ -1,5 +1,6 @@
 import {
   CancellationTokenSource,
+  CodeActionContext,
   diagnosticManager,
   Document,
   events,
@@ -7,29 +8,37 @@ import {
   languages,
   workspace,
 } from 'coc.nvim';
-import { CodeAction } from 'vscode-languageserver-protocol';
+import { CodeAction, CodeActionKind } from 'vscode-languageserver-protocol';
 
 export class Lightbulb {
   private tokenSource: CancellationTokenSource | undefined;
 
-  async show(doc?: Document): Promise<boolean> {
+  async show(doc?: Document, only?: CodeActionKind[]): Promise<boolean> {
     this.tokenSource?.cancel();
     this.tokenSource = new CancellationTokenSource();
     const token = this.tokenSource.token;
 
-    doc = doc ?? (await workspace.document);
+    if (!doc) {
+      doc = await workspace.document;
+    }
     const range = await workspace.getSelectedRange('cursor', doc);
 
     if (!range) return false;
 
     const diagnostics = diagnosticManager.getDiagnosticsInRange(doc.textDocument, range);
-    const context = { diagnostics };
+    // @ts-ignore
+    const context: CodeActionContext = { diagnostics };
+
+    if (only && only.length > 0) {
+      context.only = only;
+    }
 
     // @ts-ignore
     let codeActions: CodeAction[] = await languages.getCodeActions(doc.textDocument, range, context, token);
 
     if (!codeActions || codeActions.length == 0) return false;
     codeActions = codeActions.filter((o) => !o.disabled);
+
     return codeActions.length > 0;
   }
 }
@@ -42,6 +51,7 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
   const enableVirtualText = config.get<boolean>('enableVirtualText');
   const virtualText = config.get<string>('virtualText')!;
   const statusText = config.get<string>('statusText')!;
+  const only = config.get<string[]>('only', [])!;
 
   await workspace.nvim.command('hi default LightBulbVirtualText guifg=#FDD164');
 
@@ -49,9 +59,8 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
     events.on(['CursorHold', 'CursorHoldI'], async () => {
       const doc = await workspace.document;
       const buffer = doc.buffer;
-      const line = (await workspace.getCurrentState()).position.line;
 
-      const show = await lightbulb.show();
+      const show = await lightbulb.show(doc, only);
 
       // status text
       buffer.setVar('coc_lightbulb_status', show ? statusText : '');
@@ -59,6 +68,7 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
       // virtual text
       buffer.clearNamespace(ns);
       if (show && enableVirtualText) {
+        const line = (await workspace.getCurrentState()).position.line;
         buffer.setVirtualText(ns, line, [[virtualText, 'LightBulbVirtualText']]);
       }
     })

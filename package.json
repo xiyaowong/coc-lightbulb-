@@ -45,6 +45,14 @@
       "type": "object",
       "title": "coc-lightbulb configuration",
       "properties": {
+        "lightbulb.only": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Array of codeActionKind used for filtering"
+        },
         "lightbulb.enableVirtualText": {
           "type": "boolean",
           "default": true,
