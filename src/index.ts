@@ -60,13 +60,18 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
       const doc = await workspace.document;
       const buffer = doc.buffer;
 
+      // clear all states
+      buffer.setVar('coc_lightbulb_status', '');
+      buffer.clearNamespace(ns);
+
       const show = await lightbulb.show(doc, only);
 
       // status text
-      buffer.setVar('coc_lightbulb_status', show ? statusText : '');
+      if (show) {
+        buffer.setVar('coc_lightbulb_status', statusText);
+      }
 
       // virtual text
-      buffer.clearNamespace(ns);
       if (show && enableVirtualText) {
         const line = (await workspace.getCurrentState()).position.line;
         buffer.setVirtualText(ns, line, [[virtualText, 'LightBulbVirtualText']]);
