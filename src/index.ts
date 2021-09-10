@@ -66,13 +66,13 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
 
       const show = await lightbulb.show(doc, only);
 
+      if (!show) return;
+
       // status text
-      if (show) {
-        buffer.setVar('coc_lightbulb_status', statusText);
-      }
+      buffer.setVar('coc_lightbulb_status', statusText);
 
       // virtual text
-      if (show && enableVirtualText) {
+      if (enableVirtualText) {
         const line = (await workspace.getCurrentState()).position.line;
         buffer.setVirtualText(ns, line, [[virtualText, 'LightBulbVirtualText']]);
       }
