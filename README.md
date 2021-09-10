@@ -8,12 +8,12 @@ VSCode 💡 for coc.nvim
 
 ## Configuration
 
-| name                          | default | description                                |
-| ----------------------------- | ------- | ------------------------------------------ |
-| `lightbulb.only`              | `[]`    | Array of codeActionKind used for filtering |
-| `lightbulb.enableVirtualText` | `true`  | Whether to show virtual text               |
-| `lightbulb.virtualText`       | `💡`    | Text to show at virtual text               |
-| `lightbulb.statusText`        | `💡`    | Text to set of local buffer variable       |
+| name                          | default | description                                                                 |
+| ----------------------------- | ------- | --------------------------------------------------------------------------- |
+| `lightbulb.only`              | `[]`    | Array of codeActionKind used for filtering                                  |
+| `lightbulb.enableVirtualText` | `true`  | Whether to show virtual text                                                |
+| `lightbulb.virtualText`       | `💡`    | Text to show at virtual text. The highlight group is `LightBulbVirtualText` |
+| `lightbulb.statusText`        | `💡`    | Text to set of local buffer variable `b:coc_lightbulb_status`               |
 
 ## License
 
