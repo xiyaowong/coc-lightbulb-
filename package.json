@@ -63,6 +63,16 @@
           "default": "💡",
           "description": "Text to show at virtual text"
         },
+        "lightbulb.enableSign": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether to show sign"
+        },
+        "lightbulb.signText": {
+          "type": "string",
+          "default": "💡",
+          "description": "Text of lightbulb sign"
+        },
         "lightbulb.statusText": {
           "type": "string",
           "default": "💡",

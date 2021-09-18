@@ -17,6 +17,8 @@ Show a lightbulb if there are available codeActions for current cursor position
 | `lightbulb.only`              | `[]`    | Array of codeActionKind used for filtering                                  |
 | `lightbulb.enableVirtualText` | `true`  | Whether to show virtual text                                                |
 | `lightbulb.virtualText`       | `💡`    | Text to show at virtual text. The highlight group is `LightBulbVirtualText` |
+| `lightbulb.enableSign`        | `false` | Whether to show sign                                                        |
+| `lightbulb.signText`          | `💡`    | Text of lightbulb sign. highlights: `LightBulbSign`, `LightBulbSignLine`    |
 | `lightbulb.statusText`        | `💡`    | Text to set of local buffer variable `b:coc_lightbulb_status`               |
 
 ## License

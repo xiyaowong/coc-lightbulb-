@@ -48,34 +48,48 @@ const lightbulb = new Lightbulb();
 
 export async function activate(extCtx: ExtensionContext): Promise<void> {
   const config = workspace.getConfiguration('lightbulb');
+  const only = config.get<string[]>('only', [])!;
   const enableVirtualText = config.get<boolean>('enableVirtualText');
   const virtualText = config.get<string>('virtualText')!;
+  const enableSign = config.get<boolean>('enableSign');
+  const signText = config.get<string>('signText')!;
   const statusText = config.get<string>('statusText')!;
-  const only = config.get<string[]>('only', [])!;
 
-  await workspace.nvim.command('hi default LightBulbVirtualText guifg=#FDD164');
+  const nvim = workspace.nvim;
+  if (enableVirtualText) await nvim.command('hi default LightBulbVirtualText guifg=#FDD164');
+  if (enableSign) {
+    await nvim.command('hi default LightBulbSign guifg=#FDD164');
+    await nvim.command(
+      `sign define LightBulbSign text=${signText.replace(' ', '')} texthl=LightBulbSign linehl=LightBulbSignLine`
+    );
+  }
 
   extCtx.subscriptions.push(
     events.on(['CursorHold', 'CursorHoldI'], async () => {
       const doc = await workspace.document;
       const buffer = doc.buffer;
 
-      // clear all states
+      // clear lightbulb
       buffer.setVar('coc_lightbulb_status', '');
-      buffer.clearNamespace(ns);
+      if (enableVirtualText) buffer.clearNamespace(ns);
+      // @ts-ignore
+      if (enableSign) buffer.unplaceSign({ group: 'CocLightbulb' });
 
-      const show = await lightbulb.show(doc, only);
+      if (!(await lightbulb.show(doc, only))) return;
 
-      if (!show) return;
-
-      // status text
+      // show lightbulb
       buffer.setVar('coc_lightbulb_status', statusText);
-
-      // virtual text
-      if (enableVirtualText) {
-        const line = (await workspace.getCurrentState()).position.line;
-        buffer.setVirtualText(ns, line, [[virtualText, 'LightBulbVirtualText']]);
-      }
+      if (enableVirtualText)
+        buffer.setVirtualText(ns, (await workspace.getCurrentState()).position.line, [
+          [virtualText, 'LightBulbVirtualText'],
+        ]);
+      if (enableSign)
+        // @ts-ignore
+        buffer.placeSign({
+          lnum: (await workspace.getCurrentState()).position.line + 1,
+          name: 'LightBulbSign',
+          group: 'CocLightbulb',
+        });
     })
   );
 }
