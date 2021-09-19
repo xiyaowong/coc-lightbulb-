@@ -49,6 +49,7 @@ const lightbulb = new Lightbulb();
 export async function activate(extCtx: ExtensionContext): Promise<void> {
   const config = workspace.getConfiguration('lightbulb');
   const only = config.get<string[]>('only', [])!;
+  const excludeFiletypes = config.get<string[]>('excludeFiletypes', [])!;
   const enableVirtualText = config.get<boolean>('enableVirtualText');
   const virtualText = config.get<string>('virtualText')!;
   const enableSign = config.get<boolean>('enableSign');
@@ -67,6 +68,7 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
   extCtx.subscriptions.push(
     events.on(['CursorHold', 'CursorHoldI'], async () => {
       const doc = await workspace.document;
+      if (excludeFiletypes.includes(doc.filetype)) return;
       const buffer = doc.buffer;
 
       // clear lightbulb

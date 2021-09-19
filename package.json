@@ -53,6 +53,14 @@
           "default": [],
           "description": "Array of codeActionKind used for filtering"
         },
+        "lightbulb.excludeFiletypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Disable lightbulb in these filetyps"
+        },
         "lightbulb.enableVirtualText": {
           "type": "boolean",
           "default": true,
