@@ -6,6 +6,7 @@ import {
   events,
   ExtensionContext,
   languages,
+  window,
   workspace,
 } from 'coc.nvim';
 import { CodeAction, CodeActionKind } from 'vscode-languageserver-protocol';
@@ -21,7 +22,7 @@ export class Lightbulb {
     if (!doc) {
       doc = await workspace.document;
     }
-    const range = await workspace.getSelectedRange('cursor', doc);
+    const range = await window.getSelectedRange('cursor', doc);
 
     if (!range) return false;
 
@@ -72,19 +73,31 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
       const buffer = doc.buffer;
 
       // clear lightbulb
+      //////////////////
+
       buffer.setVar('coc_lightbulb_status', '');
+
       if (enableVirtualText) buffer.clearNamespace(ns);
+
       // @ts-ignore
       if (enableSign) buffer.unplaceSign({ group: 'CocLightbulb' });
 
       if (!(await lightbulb.show(doc, only))) return;
 
       // show lightbulb
+      /////////////////
+
       buffer.setVar('coc_lightbulb_status', statusText);
+
       if (enableVirtualText)
-        buffer.setVirtualText(ns, (await workspace.getCurrentState()).position.line, [
-          [virtualText, 'LightBulbVirtualText'],
+        await nvim.call('nvim_buf_set_virtual_text', [
+          doc.bufnr,
+          ns,
+          (await workspace.getCurrentState()).position.line,
+          [[virtualText, 'LightBulbVirtualText']],
+          {},
         ]);
+
       if (enableSign)
         // @ts-ignore
         buffer.placeSign({

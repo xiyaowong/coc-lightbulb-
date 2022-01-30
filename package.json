@@ -1,6 +1,6 @@
 {
   "name": "coc-lightbulb",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "VSCode 💡 for coc.nvim",
   "author": "wongxy <xiyao.wong@foxmail.com>",
   "license": "MIT",
@@ -24,10 +24,10 @@
     "semi": true
   },
   "devDependencies": {
-    "@types/node": "^16.7.10",
+    "@types/node": "^17.0.13",
     "@typescript-eslint/eslint-plugin": "^4.8.2",
     "@typescript-eslint/parser": "^4.8.2",
-    "coc.nvim": "^0.0.80",
+    "coc.nvim": "^0.0.81-next.11",
     "esbuild": "^0.8.42",
     "eslint": "^7.14.0",
     "eslint-config-prettier": "^8.1.0",
