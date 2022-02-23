@@ -14,15 +14,12 @@ import { CodeAction, CodeActionKind } from 'vscode-languageserver-protocol';
 export class Lightbulb {
   private tokenSource: CancellationTokenSource | undefined;
 
-  async show(doc?: Document, only?: CodeActionKind[]): Promise<boolean> {
+  async show(doc: Document, only?: CodeActionKind[]): Promise<boolean> {
     this.tokenSource?.cancel();
     this.tokenSource = new CancellationTokenSource();
     const token = this.tokenSource.token;
 
-    if (!doc) {
-      doc = await workspace.document;
-    }
-    const range = await window.getSelectedRange('cursor', doc);
+    const range = await window.getSelectedRange('cursor');
 
     if (!range) return false;
 
@@ -44,9 +41,6 @@ export class Lightbulb {
   }
 }
 
-const ns = workspace.createNameSpace('coc-lightbulb');
-const lightbulb = new Lightbulb();
-
 export async function activate(extCtx: ExtensionContext): Promise<void> {
   const config = workspace.getConfiguration('lightbulb');
   const only = config.get<string[]>('only', [])!;
@@ -58,17 +52,22 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
   const statusText = config.get<string>('statusText')!;
 
   const nvim = workspace.nvim;
-  if (enableVirtualText) await nvim.command('hi default LightBulbVirtualText guifg=#FDD164');
+  if (enableVirtualText) nvim.command('hi default LightBulbVirtualText guifg=#FDD164', true);
   if (enableSign) {
-    await nvim.command('hi default LightBulbSign guifg=#FDD164');
-    await nvim.command(
-      `sign define LightBulbSign text=${signText.replace(' ', '')} texthl=LightBulbSign linehl=LightBulbSignLine`
+    nvim.command('hi default LightBulbSign guifg=#FDD164', true);
+    nvim.command(
+      `sign define LightBulbSign text=${signText.replace(' ', '')} texthl=LightBulbSign linehl=LightBulbSignLine`,
+      true
     );
   }
+
+  const ns = await nvim.createNamespace('coc-lightbulb');
+  const lightbulb = new Lightbulb();
 
   extCtx.subscriptions.push(
     events.on(['CursorHold', 'CursorHoldI'], async () => {
       const doc = await workspace.document;
+      if (!doc || !doc.attached) return;
       if (excludeFiletypes.includes(doc.filetype)) return;
       const buffer = doc.buffer;
 
@@ -90,13 +89,17 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
       buffer.setVar('coc_lightbulb_status', statusText);
 
       if (enableVirtualText)
-        await nvim.call('nvim_buf_set_virtual_text', [
-          doc.bufnr,
-          ns,
-          (await workspace.getCurrentState()).position.line,
-          [[virtualText, 'LightBulbVirtualText']],
-          {},
-        ]);
+        nvim.call(
+          'nvim_buf_set_virtual_text',
+          [
+            doc.bufnr,
+            ns,
+            (await workspace.getCurrentState()).position.line,
+            [[virtualText, 'LightBulbVirtualText']],
+            {},
+          ],
+          true
+        );
 
       if (enableSign)
         // @ts-ignore
