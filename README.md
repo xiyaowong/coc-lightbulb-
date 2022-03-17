@@ -21,6 +21,13 @@ Show a lightbulb if there are available codeActions for current cursor position
 | `lightbulb.enableSign`        | `false` | Whether to show sign                                                        |
 | `lightbulb.signText`          | `💡`    | Text of lightbulb sign. highlights: `LightBulbSign`, `LightBulbSignLine`    |
 | `lightbulb.statusText`        | `💡`    | Text to set of local buffer variable `b:coc_lightbulb_status`               |
+| `lightbulb.followDiagnostic`  | `true`  | Don't show lightbulb when `b:coc_diagnostic_disable equal` to 1             |
+
+**How to disable lightbulb for current buffer?**
+
+```vim
+let b:coc_lightbulb_disable = 1
+```
 
 ## License
 

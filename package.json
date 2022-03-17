@@ -85,6 +85,11 @@
           "type": "string",
           "default": "💡",
           "description": "Text to set of local buffer variable"
+        },
+        "lightbulb.followDiagnostic": {
+          "type": "boolean",
+          "default": true,
+          "description": "Don't show lightbulb when b:coc_diagnostic_disable equal to 1"
         }
       }
     }

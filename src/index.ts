@@ -50,8 +50,9 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
   const enableSign = config.get<boolean>('enableSign');
   const signText = config.get<string>('signText')!;
   const statusText = config.get<string>('statusText')!;
+  const followDiagnostic = config.get<boolean>('followDiagnostic')!;
 
-  const nvim = workspace.nvim;
+  const { nvim } = workspace;
   if (enableVirtualText) nvim.command('hi default LightBulbVirtualText guifg=#FDD164', true);
   if (enableSign) {
     nvim.command('hi default LightBulbSign guifg=#FDD164', true);
@@ -80,6 +81,12 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
 
       // @ts-ignore
       if (enableSign) buffer.unplaceSign({ group: 'CocLightbulb' });
+
+      if (
+        (await buffer.getVar('coc_lightbulb_disable')) == 1 ||
+        (followDiagnostic && (await buffer.getVar('coc_diagnostic_disable')) == 1)
+      )
+        return;
 
       if (!(await lightbulb.show(doc, only))) return;
 
