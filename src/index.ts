@@ -62,6 +62,8 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
     );
   }
 
+  const nvim6 = workspace.has('nvim-0.6.0');
+
   const ns = await nvim.createNamespace('coc-lightbulb');
   const lightbulb = new Lightbulb();
 
@@ -95,18 +97,19 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
 
       buffer.setVar('coc_lightbulb_status', statusText);
 
-      if (enableVirtualText)
-        nvim.call(
-          'nvim_buf_set_virtual_text',
-          [
-            doc.bufnr,
-            ns,
-            (await workspace.getCurrentState()).position.line,
-            [[virtualText, 'LightBulbVirtualText']],
-            {},
-          ],
-          true
-        );
+      if (enableVirtualText) {
+        const lnum = (await workspace.getCurrentState()).position.line;
+        const chunks: [string, string][] = [[virtualText, 'LightBulbVirtualText']];
+        if (nvim6) {
+          buffer.setExtMark(ns, lnum, 0, {
+            hl_mode: 'combine',
+            virt_text: chunks,
+            virt_text_pos: 'eol',
+          });
+        } else {
+          nvim.call('nvim_buf_set_virtual_text', [doc.bufnr, ns, lnum, chunks, {}], true);
+        }
+      }
 
       if (enableSign)
         // @ts-ignore
