@@ -1,6 +1,6 @@
 {
   "name": "coc-lightbulb",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "description": "VSCode 💡 for coc.nvim",
   "author": "wongxy <xiyao.wong@foxmail.com>",
   "license": "MIT",
