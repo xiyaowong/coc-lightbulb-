@@ -16,7 +16,7 @@ Show a lightbulb if there are available codeActions for current cursor position
 | ----------------------------- | ------- | --------------------------------------------------------------------------- |
 | `lightbulb.only`              | `[]`    | Array of codeActionKind used for filtering                                  |
 | `lightbulb.excludeFiletypes`  | `[]`    | Disable lightbulb in these filetyps                                         |
-| `lightbulb.enableVirtualText` | `true`  | Whether to show virtual text                                                |
+| `lightbulb.enableVirtualText` | `true`  | Whether to show virtual text(neovim only)                                                |
 | `lightbulb.virtualText`       | `💡`    | Text to show at virtual text(neovim only). The highlight group is `LightBulbVirtualText` |
 | `lightbulb.enableSign`        | `false` | Whether to show sign                                                        |
 | `lightbulb.signText`          | `💡`    | Text of lightbulb sign. highlights: `LightBulbSign`, `LightBulbSignLine`    |

@@ -45,7 +45,10 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
   const config = workspace.getConfiguration('lightbulb');
   const only = config.get<string[]>('only', [])!;
   const excludeFiletypes = config.get<string[]>('excludeFiletypes', [])!;
-  const enableVirtualText = config.get<boolean>('enableVirtualText');
+  const enableVirtualText =
+    workspace.isNvim &&
+    workspace.nvim.hasFunction('nvim_buf_set_virtual_text') &&
+    config.get<boolean>('enableVirtualText')!;
   const virtualText = config.get<string>('virtualText')!;
   const enableSign = config.get<boolean>('enableSign');
   const signText = config.get<string>('signText')!;
