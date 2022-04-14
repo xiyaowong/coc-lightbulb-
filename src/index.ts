@@ -77,26 +77,29 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
       if (excludeFiletypes.includes(doc.filetype)) return;
       const buffer = doc.buffer;
 
-      // clear lightbulb
-      //////////////////
+      const disabled =
+        (await buffer.getVar('coc_lightbulb_disable')) == 1 ||
+        (followDiagnostic && (await buffer.getVar('coc_diagnostic_disable')) == 1);
+
+      const show = !disabled && (await lightbulb.show(doc, only));
+
+      /////////////////////
+      // clear lightbulb //
+      /////////////////////
 
       buffer.setVar('coc_lightbulb_status', '');
-
       if (enableVirtualText) buffer.clearNamespace(ns);
 
       // @ts-ignore
       if (enableSign) buffer.unplaceSign({ group: 'CocLightbulb' });
 
-      if (
-        (await buffer.getVar('coc_lightbulb_disable')) == 1 ||
-        (followDiagnostic && (await buffer.getVar('coc_diagnostic_disable')) == 1)
-      )
-        return;
+      //////////////////
+      if (!show) return;
+      //////////////////
 
-      if (!(await lightbulb.show(doc, only))) return;
-
-      // show lightbulb
-      /////////////////
+      ////////////////////
+      // show lightbulb //
+      ////////////////////
 
       buffer.setVar('coc_lightbulb_status', statusText);
 
