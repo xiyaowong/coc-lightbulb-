@@ -1,6 +1,6 @@
 # coc-lightbulb
 
-VSCode 💡 for coc.nvim
+Code action 💡 for coc.nvim
 
 Show a lightbulb if there are available codeActions for current cursor position
 
