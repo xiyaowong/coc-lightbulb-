@@ -69,6 +69,24 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
   }
 
   const nvim6 = workspace.has('nvim-0.6.0');
+  if (nvim6) {
+    nvim.lua(`
+function _G.__coc_lightbulb_check_virt_text_eol(bufnr, lnum)
+	for _, ns_id in pairs(vim.api.nvim_get_namespaces()) do
+		local marks = vim.api.nvim_buf_get_extmarks(bufnr, ns_id, { lnum, 0 }, { lnum, -1 }, { details = true })
+		if #marks > 0 then
+			for _, mark in ipairs(marks) do
+				local details = mark[4]
+				if details.virt_text and details.virt_text_pos == "eol" then
+					return true
+				end
+			end
+		end
+	end
+  return false
+end
+         `);
+  }
 
   const ns = await nvim.createNamespace('coc-lightbulb');
   const lightbulb = new Lightbulb();
@@ -126,17 +144,27 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
           }
           const length = line.text.length;
           if (offset < virtualTextPadding) {
-            // right side
+            // left side has no enough area to place virt_text
+            // so choose [right] side
             pos = 'eol';
             col = 0;
           } else {
             // Side closest to current cursor
             if (curCol - offset + virtualTextPadding <= length - curCol) {
+              // [left]
               pos = 'overlay';
               col = offset - virtualTextPadding;
             } else {
-              pos = 'eol';
-              col = 0;
+              // If there is already virtual text on the right, choose the left first.
+              // This avoid distracting the developer with too much virtual text moving around
+              if (await nvim.call('luaeval', [`__coc_lightbulb_check_virt_text_eol(${doc.bufnr}, ${lnum})`])) {
+                pos = 'overlay';
+                col = offset - virtualTextPadding;
+              } else {
+                // [right]
+                pos = 'eol';
+                col = 0;
+              }
             }
           }
         } else {
