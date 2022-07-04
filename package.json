@@ -88,7 +88,7 @@
         },
         "lightbulb.virtualTextPriority": {
           "type": "number",
-          "default": 50,
+          "default": 0,
           "description": "Priority of virtual text"
         },
         "lightbulb.enableSign": {
