@@ -50,6 +50,9 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
     workspace.nvim.hasFunction('nvim_buf_set_virtual_text') &&
     config.get<boolean>('enableVirtualText')!;
   const virtualText = config.get<string>('virtualText')!;
+  const virtualTextPriority = config.get<number>('virtualTextPriority')!;
+  const virtualTextPosition = config.get<'auto' | 'eol' | 'right_align'>('virtualTextPosition')!;
+  const virtualTextPadding = 2 * virtualText.length + 2;
   const enableSign = config.get<boolean>('enableSign');
   const signText = config.get<string>('signText')!;
   const statusText = config.get<string>('statusText')!;
@@ -70,60 +73,99 @@ export async function activate(extCtx: ExtensionContext): Promise<void> {
   const ns = await nvim.createNamespace('coc-lightbulb');
   const lightbulb = new Lightbulb();
 
+  const refresh = async () => {
+    const doc = await workspace.document;
+    if (!doc || !doc.attached) return;
+    if (excludeFiletypes.includes(doc.filetype)) return;
+    const buffer = doc.buffer;
+
+    const disabled =
+      (await buffer.getVar('coc_lightbulb_disable')) == 1 ||
+      (followDiagnostic && (await buffer.getVar('coc_diagnostic_disable')) == 1);
+
+    const show = !disabled && (await lightbulb.show(doc, only));
+
+    /////////////////////
+    // clear lightbulb //
+    /////////////////////
+
+    buffer.setVar('coc_lightbulb_status', '');
+    if (enableVirtualText) buffer.clearNamespace(ns);
+
+    // @ts-ignore
+    if (enableSign) buffer.unplaceSign({ group: 'CocLightbulb' });
+
+    //////////////////
+    if (!show) return;
+    //////////////////
+
+    ////////////////////
+    // show lightbulb //
+    ////////////////////
+
+    buffer.setVar('coc_lightbulb_status', statusText);
+
+    if (enableVirtualText) {
+      const chunks: [string, string][] = [[virtualText, 'LightBulbVirtualText']];
+      const state = await workspace.getCurrentState();
+      const lnum = state.position.line;
+
+      if (!nvim6) {
+        // no more updated this api
+        nvim.call('nvim_buf_set_virtual_text', [doc.bufnr, ns, lnum, chunks, {}], true);
+      } else {
+        let col: number;
+        let pos: 'overlay' | 'eol' | 'right_align';
+        if (virtualTextPosition == 'auto') {
+          const line = state.document.lineAt(lnum);
+          const curCol = state.position.character;
+          let offset = line.firstNonWhitespaceCharacterIndex;
+          // make sure offset <= curCol <= length
+          if (curCol < offset) {
+            offset = curCol;
+          }
+          const length = line.text.length;
+          if (offset < virtualTextPadding) {
+            // right side
+            pos = 'eol';
+            col = 0;
+          } else {
+            // Side closest to current cursor
+            if (curCol - offset + virtualTextPadding <= length - curCol) {
+              pos = 'overlay';
+              col = offset - virtualTextPadding;
+            } else {
+              pos = 'eol';
+              col = 0;
+            }
+          }
+        } else {
+          pos = virtualTextPosition;
+          col = 0;
+        }
+        buffer.setExtMark(ns, lnum, col, {
+          hl_mode: 'combine',
+          virt_text: chunks,
+          virt_text_pos: pos,
+          priority: virtualTextPriority,
+        });
+      }
+    }
+
+    if (enableSign)
+      // @ts-ignore
+      buffer.placeSign({
+        lnum: (await workspace.getCurrentState()).position.line + 1,
+        name: 'LightBulbSign',
+        group: 'CocLightbulb',
+      });
+  };
+
   extCtx.subscriptions.push(
     events.on(['CursorHold', 'CursorHoldI'], async () => {
-      const doc = await workspace.document;
-      if (!doc || !doc.attached) return;
-      if (excludeFiletypes.includes(doc.filetype)) return;
-      const buffer = doc.buffer;
-
-      const disabled =
-        (await buffer.getVar('coc_lightbulb_disable')) == 1 ||
-        (followDiagnostic && (await buffer.getVar('coc_diagnostic_disable')) == 1);
-
-      const show = !disabled && (await lightbulb.show(doc, only));
-
-      /////////////////////
-      // clear lightbulb //
-      /////////////////////
-
-      buffer.setVar('coc_lightbulb_status', '');
-      if (enableVirtualText) buffer.clearNamespace(ns);
-
-      // @ts-ignore
-      if (enableSign) buffer.unplaceSign({ group: 'CocLightbulb' });
-
-      //////////////////
-      if (!show) return;
-      //////////////////
-
-      ////////////////////
-      // show lightbulb //
-      ////////////////////
-
-      buffer.setVar('coc_lightbulb_status', statusText);
-
-      if (enableVirtualText) {
-        const lnum = (await workspace.getCurrentState()).position.line;
-        const chunks: [string, string][] = [[virtualText, 'LightBulbVirtualText']];
-        if (nvim6) {
-          buffer.setExtMark(ns, lnum, 0, {
-            hl_mode: 'combine',
-            virt_text: chunks,
-            virt_text_pos: 'eol',
-          });
-        } else {
-          nvim.call('nvim_buf_set_virtual_text', [doc.bufnr, ns, lnum, chunks, {}], true);
-        }
-      }
-
-      if (enableSign)
-        // @ts-ignore
-        buffer.placeSign({
-          lnum: (await workspace.getCurrentState()).position.line + 1,
-          name: 'LightBulbSign',
-          group: 'CocLightbulb',
-        });
+      await refresh();
     })
   );
+
+  setTimeout(refresh, 3000);
 }

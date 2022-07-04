@@ -71,6 +71,26 @@
           "default": "💡",
           "description": "Text to show at virtual text"
         },
+        "lightbulb.virtualTextPosition": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "eol",
+            "right_align"
+          ],
+          "markdownDescription": "Virtual text position",
+          "markdownEnumDescriptions": [
+            "Automatically select the position closest to the cursor",
+            "Right after eol character",
+            "Display right aligned in the window"
+          ]
+        },
+        "lightbulb.virtualTextPriority": {
+          "type": "number",
+          "default": 50,
+          "description": "Priority of virtual text"
+        },
         "lightbulb.enableSign": {
           "type": "boolean",
           "default": false,
