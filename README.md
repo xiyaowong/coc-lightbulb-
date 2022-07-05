@@ -19,7 +19,7 @@ Show a lightbulb if there are available codeActions for current cursor position
 | `lightbulb.enableVirtualText`   | `true`  | Whether to show virtual text(neovim only)                                                |
 | `lightbulb.virtualText`         | `💡`    | Text to show at virtual text(neovim only). The highlight group is `LightBulbVirtualText` |
 | `lightbulb.virtualTextPosition` | `auto`  | Virtual text position                                                                    |
-| `lightbulb.virtualTextPriority` | `0`     | Priority of virtual text                                                                 |
+| `lightbulb.virtualTextPriority` | `50`    | Priority of virtual text                                                                 |
 | `lightbulb.enableSign`          | `false` | Whether to show sign                                                                     |
 | `lightbulb.signText`            | `💡`    | Text of lightbulb sign. highlights: `LightBulbSign`, `LightBulbSignLine`                 |
 | `lightbulb.statusText`          | `💡`    | Text to set of local buffer variable `b:coc_lightbulb_status`                            |
