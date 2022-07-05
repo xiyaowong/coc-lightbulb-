@@ -53,19 +53,21 @@ class Config {
     this.nvim6 = nvim6;
     if (nvim6) {
       nvim.lua(`
-function _G.__coc_lightbulb_check_virt_text_eol(bufnr, lnum)
+function _G.__coc_lightbulb_check_virt_text_eol(bufnr, lnum, exclude_ns)
 	for _, ns_id in pairs(vim.api.nvim_get_namespaces()) do
-		local marks = vim.api.nvim_buf_get_extmarks(bufnr, ns_id, { lnum, 0 }, { lnum, -1 }, { details = true })
-		if #marks > 0 then
-			for _, mark in ipairs(marks) do
-				local details = mark[4]
-				if details.virt_text and details.virt_text_pos == "eol" then
-					return true
+		if ns_id ~= exclude_ns then
+			local marks = vim.api.nvim_buf_get_extmarks(bufnr, ns_id, { lnum, 0 }, { lnum, -1 }, { details = true })
+			if #marks > 0 then
+				for _, mark in ipairs(marks) do
+					local details = mark[4]
+					if details.virt_text and details.virt_text_pos == "eol" then
+						return true
+					end
 				end
 			end
 		end
 	end
-  return false
+	return false
 end
          `);
     }

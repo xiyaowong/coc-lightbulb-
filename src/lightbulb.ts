@@ -7,9 +7,10 @@ import {
   window,
   workspace,
   Neovim,
+  ExtmarkOptions,
 } from 'coc.nvim';
 
-import { config } from './config';
+import { config as cfg } from './config';
 import { CodeAction, CodeActionKind } from 'vscode-languageserver-protocol';
 
 class Lightbulb {
@@ -50,96 +51,170 @@ class Lightbulb {
 
   private async show(doc: Document) {
     const { buffer } = doc;
-    buffer.setVar('coc_lightbulb_status', config.statusText);
 
-    const state = await workspace.getCurrentState();
-    const lnum = state.position.line;
+    buffer.setVar('coc_lightbulb_status', cfg.statusText);
 
-    if (config.enableVirtualText) {
-      const chunks: [string, string][] = [[config.virtualText, 'LightBulbVirtualText']];
+    if (cfg.enableVirtualText) this.showVirtualText(doc);
 
-      if (!config.nvim6) {
-        // no more updated this api
-        this.nvim.call('nvim_buf_set_virtual_text', [doc.bufnr, this.NS, lnum, chunks, {}], true);
-      } else {
-        let col: number;
-        let pos: 'overlay' | 'eol' | 'right_align';
-        if (config.virtualTextPosition == 'auto') {
-          const line = state.document.lineAt(lnum);
-          const curCol = state.position.character;
-          let offset = line.firstNonWhitespaceCharacterIndex;
-          // make sure offset <= curCol <= length
-          if (curCol < offset) {
-            offset = curCol;
-          }
-          const length = line.text.length;
-          if (offset < config.virtualTextPadding) {
-            // left side has no enough area to place virt_text
-            // so choose [right] side
-            pos = 'eol';
-            col = 0;
-          } else {
-            // Side closest to current cursor
-            if (curCol - offset + config.virtualTextPadding <= length - curCol) {
-              // [left]
-              pos = 'overlay';
-              col = offset - config.virtualTextPadding;
-            } else {
-              // If there is already virtual text on the right, choose the left first.
-              // This avoid distracting the developer with too much virtual text moving around
-              if (await this.nvim.call('luaeval', [`__coc_lightbulb_check_virt_text_eol(${doc.bufnr}, ${lnum})`])) {
-                pos = 'overlay';
-                col = offset - config.virtualTextPadding;
-              } else {
-                // [right]
-                pos = 'eol';
-                col = 0;
-              }
-            }
-          }
-        } else {
-          pos = config.virtualTextPosition;
-          col = 0;
-        }
-        buffer.setExtMark(this.NS, lnum, col, {
-          hl_mode: 'combine',
-          virt_text: chunks,
-          virt_text_pos: pos,
-          priority: config.virtualTextPriority,
-        });
-      }
-    }
-
-    if (config.enableSign)
+    if (cfg.enableSign)
       // @ts-ignore
       buffer.placeSign({
-        lnum: lnum + 1,
+        lnum: (await workspace.getCurrentState()).position.line + 1,
         name: 'LightBulbSign',
         group: 'CocLightbulb',
       });
   }
 
-  async clear(doc: Document, force?: boolean) {
+  /*
+    try to find the best position
+    */
+  private async showVirtualText(doc: Document) {
+    const chunks: [string, string][] = [[cfg.virtualText, 'LightBulbVirtualText']];
+    const state = await workspace.getCurrentState();
+    let lnum = state.position.line;
+
+    if (!cfg.nvim6) {
+      // no more updated this api
+      this.nvim.call('nvim_buf_set_virtual_text', [doc.bufnr, this.NS, lnum, chunks, {}], true);
+      return;
+    }
+
+    const buffer = doc.buffer;
+
+    if (cfg.virtualTextPosition !== 'auto') {
+      buffer.setExtMark(this.NS, lnum, 0, {
+        hl_mode: 'combine',
+        virt_text: chunks,
+        virt_text_pos: cfg.virtualTextPosition,
+        priority: cfg.virtualTextPriority,
+      });
+      return;
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    //  left > right(very close and no other virtual text) > top > bottom
+    //////////////////////////////////////////////////////////////////////////
+
+    const padding = cfg.virtualTextPadding;
+
+    // place eol by default, because it's safe
+    let col = 0;
+    let opts: ExtmarkOptions = { virt_text_pos: 'eol' };
+
+    const line = state.document.lineAt(lnum);
+    const curCol = state.position.character;
+    let offset = line.firstNonWhitespaceCharacterIndex;
+
+    // make sure offset <= curCol <= length
+    if (curCol < offset) {
+      offset = curCol;
+    }
+    const end = line.range.end.character;
+
+    const right_top_bottom = (() => {
+      let ret: boolean | undefined;
+      return async () => {
+        // cached
+        if (ret !== undefined) return ret;
+        // right
+        if (
+          end - curCol < 30 &&
+          (await this.nvim.call('winwidth', [0])) - end > padding &&
+          // If there is already virtual text on the right, choose the left first.
+          // This avoid distracting the developer with too much virtual text moving around
+          !(await this.checkVirtualTextEol(doc.bufnr, lnum, this.NS))
+        ) {
+          col = 0;
+          opts = { virt_text_pos: 'eol' };
+          ret = true;
+          return ret;
+        }
+        // top
+        if (lnum) {
+          const previousLineEnd = doc.textDocument.lineAt(lnum - 1).range.end.character;
+          if (previousLineEnd + padding < curCol || previousLineEnd == 0) {
+            lnum = lnum - 1;
+            opts = {
+              virt_text_win_col: previousLineEnd + padding,
+            };
+            ret = true;
+            return ret;
+          }
+        }
+        // bottom
+        if (lnum < doc.lineCount - 1) {
+          const lastLineEnd = doc.textDocument.lineAt(lnum + 1).range.end.character;
+          if (lastLineEnd + padding < curCol || lastLineEnd == 0) {
+            lnum = lnum + 1;
+            opts = {
+              virt_text_win_col: lastLineEnd + padding,
+            };
+            ret = true;
+            return ret;
+          }
+        }
+        ret = false;
+        return ret;
+      };
+    })();
+
+    if (offset < padding) {
+      // The left is not possible, there are only 3 cases
+      await right_top_bottom();
+    } else {
+      // can be left
+
+      // The left side may not be the best
+      if (curCol - offset + padding <= Math.min(30, end - curCol)) {
+        // left is the best
+        opts = { virt_text_pos: 'overlay' };
+        col = offset - padding;
+      } else {
+        if (!(await right_top_bottom())) {
+          // left is not the expected, but no one is better
+          opts = { virt_text_pos: 'overlay' };
+          col = offset - padding;
+        }
+      }
+    }
+
+    buffer.setExtMark(this.NS, lnum, col, {
+      hl_mode: 'combine',
+      virt_text: chunks,
+      priority: cfg.virtualTextPriority,
+      ...opts,
+    });
+  }
+
+  private async clear(doc: Document, force?: boolean) {
     const { buffer } = doc;
     buffer.setVar('coc_lightbulb_status', '');
-    if (force || config.enableVirtualText) buffer.clearNamespace(this.NS);
+    if (force || cfg.enableVirtualText) buffer.clearNamespace(this.NS);
     // @ts-ignore
-    if (force || config.enableSign) buffer.unplaceSign({ group: 'CocLightbulb' });
+    if (force || cfg.enableSign) buffer.unplaceSign({ group: 'CocLightbulb' });
   }
 
   public async refresh(forceClear?: boolean) {
     const doc = await workspace.document;
     if (!doc || !doc.attached) return;
-    if (config.excludeFiletypes.includes(doc.filetype)) return;
+    if (cfg.excludeFiletypes.includes(doc.filetype)) return;
     const buffer = doc.buffer;
 
     const disabled =
       (await buffer.getVar('coc_lightbulb_disable')) == 1 ||
-      (config.followDiagnostic && (await buffer.getVar('coc_diagnostic_disable')) == 1);
+      (cfg.followDiagnostic && (await buffer.getVar('coc_diagnostic_disable')) == 1);
 
-    const show = !disabled && (await this.hasCodeActions(doc, config.only));
-    this.clear(doc, forceClear);
-    if (show) this.show(doc);
+    const show = !disabled && (await this.hasCodeActions(doc, cfg.only));
+    await this.clear(doc, forceClear);
+    if (show) await this.show(doc);
+  }
+
+  private async checkVirtualTextEol(bufnr: number, lnum: number, excludeNamespace?: number) {
+    return await this.nvim.call('luaeval', [
+      `__coc_lightbulb_check_virt_text_eol(${bufnr}, ${lnum}, ${
+        excludeNamespace == undefined ? 'nil' : excludeNamespace
+      })`,
+    ]);
   }
 }
 
