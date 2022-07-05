@@ -66,10 +66,19 @@
           "default": true,
           "description": "Whether to show virtual text"
         },
-        "lightbulb.virtualText": {
-          "type": "string",
-          "default": "💡",
-          "description": "Text to show at virtual text"
+        "lightbulb.text": {
+          "type": "object",
+          "description": "Text used to display",
+          "properties": {
+            "default": {
+              "type": "string",
+              "default": ""
+            },
+            "quickfix": {
+              "type": "string",
+              "default": ""
+            }
+          }
         },
         "lightbulb.virtualTextPosition": {
           "type": "string",
@@ -96,15 +105,10 @@
           "default": false,
           "description": "Whether to show sign"
         },
-        "lightbulb.signText": {
-          "type": "string",
-          "default": "💡",
-          "description": "Text of lightbulb sign"
-        },
-        "lightbulb.statusText": {
-          "type": "string",
-          "default": "💡",
-          "description": "Text to set of local buffer variable"
+        "lightbulb.signPriority": {
+          "type": "number",
+          "default": 20,
+          "description": "Priority of sign"
         },
         "lightbulb.followDiagnostic": {
           "type": "boolean",

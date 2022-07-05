@@ -3,16 +3,22 @@ import { workspace } from 'coc.nvim';
 class Config {
   public only!: string[];
   public excludeFiletypes!: string[];
+
   public enableVirtualText!: boolean;
-  public virtualText!: string;
   public virtualTextPriority!: number;
   public virtualTextPosition!: 'auto' | 'eol' | 'right_align';
   public virtualTextPadding!: number;
+
   public enableSign!: boolean;
-  public signText!: string;
-  public statusText!: string;
+  public signPriority!: number;
+
   public followDiagnostic!: boolean;
   public nvim6!: boolean;
+  public text!: { default: string; quickfix: string };
+  public names!: {
+    virtualText: { default: string; quickfix: string };
+    sign: { default: string; quickfix: string };
+  };
 
   constructor() {
     this.setConfiguration();
@@ -27,24 +33,48 @@ class Config {
       workspace.isNvim &&
       workspace.nvim.hasFunction('nvim_buf_set_virtual_text') &&
       cfg.get<boolean>('enableVirtualText')!;
-    this.virtualText = cfg.get<string>('virtualText')!;
+
+    const textCfg = workspace.getConfiguration('lightbulb.text');
+
+    this.text = {
+      default: textCfg.get<string>('default', ''),
+      quickfix: textCfg.get<string>('quickfix', ''),
+    };
+
     this.virtualTextPriority = cfg.get<number>('virtualTextPriority')!;
     this.virtualTextPosition = cfg.get<'auto' | 'eol' | 'right_align'>('virtualTextPosition')!;
-    this.virtualTextPadding = 2 * this.virtualText.length + 2;
+    this.virtualTextPadding = 2 * Math.max(this.text.default.length, this.text.quickfix.length) + 2;
+
     this.enableSign = cfg.get<boolean>('enableSign')!;
-    this.signText = cfg.get<string>('signText')!;
-    this.statusText = cfg.get<string>('statusText')!;
+    this.signPriority = cfg.get<number>('signPriority')!;
+
     this.followDiagnostic = cfg.get<boolean>('followDiagnostic')!;
 
+    const names = {
+      virtualText: { default: 'LightBulbDefaultVirtualText', quickfix: 'LightBulbQuickFixVirtualText' },
+      sign: { default: 'LightBulbDefaultSign', quickfix: 'LightBulbQuickFixSign' },
+    };
+
+    this.names = names;
+
     const { nvim } = workspace;
-    if (this.enableVirtualText) nvim.command('hi default LightBulbVirtualText guifg=#FDD164', true);
+    if (this.enableVirtualText) {
+      nvim.command(`hi default ${names.virtualText.default} guifg=#FDD164`, true);
+      nvim.command(`hi default link ${names.virtualText.quickfix} ${names.virtualText.default}`, true);
+    }
     if (this.enableSign) {
-      nvim.command('hi default LightBulbSign guifg=#FDD164', true);
+      nvim.command(`hi default ${names.sign.default} guifg=#FDD164`, true);
+      nvim.command(`hi default link ${names.sign.quickfix} ${this.names.sign.default}`, true);
       nvim.command(
-        `sign define LightBulbSign text=${this.signText.replace(
-          ' ',
-          ''
-        )} texthl=LightBulbSign linehl=LightBulbSignLine`,
+        `sign define ${names.sign.default} text=${this.text.default.replace(' ', '')} texthl=${
+          names.sign.default
+        } linehl=${names.sign.default}Line`,
+        true
+      );
+      nvim.command(
+        `sign define ${names.sign.quickfix} text=${this.text.quickfix.replace(' ', '')} texthl=${
+          names.sign.quickfix
+        } linehl=${names.sign.quickfix}Line`,
         true
       );
     }

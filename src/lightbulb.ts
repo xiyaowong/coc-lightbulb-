@@ -23,14 +23,19 @@ class Lightbulb {
     this.nvim.createNamespace('coc-lightbulb').then((ns) => (this.NS = ns));
   }
 
-  private async hasCodeActions(doc: Document, only?: CodeActionKind[]): Promise<boolean> {
+  private async hasCodeActions(
+    doc: Document,
+    only?: CodeActionKind[]
+  ): Promise<{ hasCodeActions: boolean; hasQuickFix: boolean }> {
+    const none: { hasCodeActions: boolean; hasQuickFix: boolean } = { hasCodeActions: false, hasQuickFix: false };
+
     this.tokenSource?.cancel();
     this.tokenSource = new CancellationTokenSource();
     const token = this.tokenSource.token;
 
     const range = await window.getSelectedRange('cursor');
 
-    if (!range) return false;
+    if (!range) return none;
 
     const diagnostics = diagnosticManager.getDiagnosticsInRange(doc.textDocument, range);
     // @ts-ignore
@@ -43,33 +48,43 @@ class Lightbulb {
     // @ts-ignore
     let codeActions: CodeAction[] = await languages.getCodeActions(doc.textDocument, range, context, token);
 
-    if (!codeActions || codeActions.length == 0) return false;
+    if (!codeActions || codeActions.length == 0) return none;
     codeActions = codeActions.filter((o) => !o.disabled);
 
-    return codeActions.length > 0;
+    if (codeActions.length) {
+      return {
+        hasCodeActions: true,
+        hasQuickFix: codeActions.findIndex((action) => action.kind == CodeActionKind.QuickFix) >= 0,
+      };
+    }
+    return none;
   }
 
-  private async show(doc: Document) {
+  private async show(doc: Document, hasQuickFix: boolean) {
     const { buffer } = doc;
 
-    buffer.setVar('coc_lightbulb_status', cfg.statusText);
+    buffer.setVar('coc_lightbulb_status', hasQuickFix ? cfg.text.quickfix : cfg.text.default);
 
-    if (cfg.enableVirtualText) this.showVirtualText(doc);
+    if (cfg.enableVirtualText) this.showVirtualText(doc, hasQuickFix);
 
     if (cfg.enableSign)
-      // @ts-ignore
       buffer.placeSign({
         lnum: (await workspace.getCurrentState()).position.line + 1,
-        name: 'LightBulbSign',
+        name: hasQuickFix ? cfg.names.sign.quickfix : cfg.names.sign.default,
         group: 'CocLightbulb',
+        priority: cfg.signPriority,
       });
   }
 
   /*
     try to find the best position
     */
-  private async showVirtualText(doc: Document) {
-    const chunks: [string, string][] = [[cfg.virtualText, 'LightBulbVirtualText']];
+  private async showVirtualText(doc: Document, hasQuickFix: boolean) {
+    const chunks: [string, string][] = [
+      hasQuickFix
+        ? [cfg.text.quickfix, cfg.names.virtualText.quickfix]
+        : [cfg.text.default, cfg.names.virtualText.default],
+    ];
     const state = await workspace.getCurrentState();
     let lnum = state.position.line;
 
@@ -204,9 +219,13 @@ class Lightbulb {
       (await buffer.getVar('coc_lightbulb_disable')) == 1 ||
       (cfg.followDiagnostic && (await buffer.getVar('coc_diagnostic_disable')) == 1);
 
-    const show = !disabled && (await this.hasCodeActions(doc, cfg.only));
+    if (disabled) {
+      await this.clear(doc, forceClear);
+      return;
+    }
+    const { hasCodeActions, hasQuickFix } = await this.hasCodeActions(doc, cfg.only);
     await this.clear(doc, forceClear);
-    if (show) await this.show(doc);
+    if (hasCodeActions) await this.show(doc, hasQuickFix);
   }
 
   private async checkVirtualTextEol(bufnr: number, lnum: number, excludeNamespace?: number) {
