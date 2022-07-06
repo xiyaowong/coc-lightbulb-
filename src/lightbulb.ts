@@ -131,14 +131,8 @@ class Lightbulb {
       return async () => {
         // cached
         if (ret !== undefined) return ret;
-        // right
-        if (
-          end - curCol < 30 &&
-          (await this.nvim.call('winwidth', [0])) - end > padding &&
-          // If there is already virtual text on the right, choose the left first.
-          // This avoid distracting the developer with too much virtual text moving around
-          !(await this.checkVirtualTextEol(doc.bufnr, lnum, this.NS))
-        ) {
+        // right, check by lua
+        if (await this.nvim.call('luaeval', [`__coc_lightbulb_is_eol_suitable()`])) {
           col = 0;
           opts = { virt_text_pos: 'eol' };
           ret = true;
@@ -226,14 +220,6 @@ class Lightbulb {
     const { hasCodeActions, hasQuickFix } = await this.hasCodeActions(doc, cfg.only);
     await this.clear(doc, forceClear);
     if (hasCodeActions) await this.show(doc, hasQuickFix);
-  }
-
-  private async checkVirtualTextEol(bufnr: number, lnum: number, excludeNamespace?: number) {
-    return await this.nvim.call('luaeval', [
-      `__coc_lightbulb_check_virt_text_eol(${bufnr}, ${lnum}, ${
-        excludeNamespace == undefined ? 'nil' : excludeNamespace
-      })`,
-    ]);
   }
 }
 

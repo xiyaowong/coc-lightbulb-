@@ -79,27 +79,46 @@ class Config {
       );
     }
 
-    const nvim6 = workspace.has('nvim-0.6.0');
-    this.nvim6 = nvim6;
-    if (nvim6) {
-      nvim.lua(`
-function _G.__coc_lightbulb_check_virt_text_eol(bufnr, lnum, exclude_ns)
-	for _, ns_id in pairs(vim.api.nvim_get_namespaces()) do
-		if ns_id ~= exclude_ns then
-			local marks = vim.api.nvim_buf_get_extmarks(bufnr, ns_id, { lnum, 0 }, { lnum, -1 }, { details = true })
+    this.nvim6 = workspace.has('nvim-0.6.0');
+    if (this.nvim6) {
+      nvim.createNamespace('coc-lightbulb').then((ns) => {
+        // TODO: check window view overflow
+        const code = `
+local ffi = require("ffi")
+local api = vim.api
+
+ffi.cdef("int curwin_col_off(void);")
+---@diagnostic disable-next-line: undefined-field
+local curwin_col_off = ffi.C.curwin_col_off
+
+function _G.__coc_lightbulb_is_eol_suitable()
+	local finish = vim.fn.col("$") - 1
+	local curCol = vim.fn.col(".") - 1
+
+	if finish - curCol > 30 or finish + curwin_col_off() + ${this.virtualTextPadding} > api.nvim_win_get_width(0) then
+		return false
+	end
+
+	local lnum = vim.fn.line(".") - 1
+
+	for _, ns in pairs(api.nvim_get_namespaces()) do
+		if ns ~= ${ns} then
+			local marks = api.nvim_buf_get_extmarks(0, ns, { lnum, 0 }, { lnum, -1 }, { details = true })
 			if #marks > 0 then
 				for _, mark in ipairs(marks) do
 					local details = mark[4]
 					if details.virt_text and details.virt_text_pos == "eol" then
-						return true
+						return false
 					end
 				end
 			end
 		end
 	end
-	return false
+	return true
 end
-         `);
+         `;
+        nvim.lua(code);
+      });
     }
   }
 }
