@@ -87,6 +87,9 @@ class Lightbulb {
     ];
     const state = await workspace.getCurrentState();
     let lnum = state.position.line;
+    // NOTE: Sometimes switching buffer too fast will lead to wrong data
+    // Should be coc's bug
+    if (lnum > state.document.lineCount - 1) return;
 
     if (!cfg.nvim6) {
       // no more updated this api
