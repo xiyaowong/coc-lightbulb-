@@ -37,8 +37,8 @@ class Config {
     const textCfg = workspace.getConfiguration('lightbulb.text');
 
     this.text = {
-      default: textCfg.get<string>('default', ''),
-      quickfix: textCfg.get<string>('quickfix', ''),
+      default: textCfg.get<string>('default', '󰌵'),
+      quickfix: textCfg.get<string>('quickfix', '󰁨'),
     };
 
     this.virtualTextPriority = cfg.get<number>('virtualTextPriority')!;
