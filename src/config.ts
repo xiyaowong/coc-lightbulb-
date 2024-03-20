@@ -87,15 +87,11 @@ class Config {
 local ffi = require("ffi")
 local api = vim.api
 
-ffi.cdef("int curwin_col_off(void);")
----@diagnostic disable-next-line: undefined-field
-local curwin_col_off = ffi.C.curwin_col_off
-
 function _G.__coc_lightbulb_is_eol_suitable()
 	local finish = vim.fn.col("$") - 1
 	local curCol = vim.fn.col(".") - 1
 
-	if finish - curCol > 30 or finish + curwin_col_off() + ${this.virtualTextPadding} > api.nvim_win_get_width(0) then
+	if finish - curCol > 30 or finish + vim.fn.winsaveview().leftcol + ${this.virtualTextPadding} > api.nvim_win_get_width(0) then
 		return false
 	end
 
